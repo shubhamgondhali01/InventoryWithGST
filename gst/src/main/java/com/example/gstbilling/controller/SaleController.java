@@ -1,15 +1,15 @@
 package com.example.gstbilling.controller;
 
 import com.example.gstbilling.model.Sale;
+import com.example.gstbilling.service.ApiKeyAuthService;
 import com.example.gstbilling.service.SaleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 import java.util.Map;
 import java.util.HashMap;
-
 
 @RestController
 @RequestMapping("/sales")
@@ -18,27 +18,72 @@ public class SaleController {
     @Autowired
     private SaleService saleService;
 
+    @Autowired
+    private ApiKeyAuthService apiKeyAuthService;
+
     @PostMapping
-    public String createSale(@RequestParam Long productId,
-                             @RequestParam int quantity,
-                             @RequestParam String saleDate) {
-        return saleService.createSale(productId, quantity, saleDate);
+    public ResponseEntity<String> createSale(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestParam Long productId,
+            @RequestParam int quantity,
+            @RequestParam String saleDate) {
+
+        // Validate the API key and check if the user has ADMIN role
+        ResponseEntity<String> authResponse = apiKeyAuthService.validateApiKey(authorizationHeader);
+        if (!authResponse.getStatusCode().is2xxSuccessful() || !authResponse.getBody().equals("ADMIN")) {
+            return ResponseEntity.status(authResponse.getStatusCode()).body("Admin Access Only");
+        }
+
+        // Create a sale
+        String result = saleService.createSale(productId, quantity, saleDate);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/byDate")
-    public List<Sale> getSalesByDate(@RequestParam String saleDate) {
-        return saleService.getSalesByDate(saleDate);
+    public ResponseEntity<List<Sale>> getSalesByDate(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestParam String saleDate) {
+
+        // Validate the API key and check if the user has ADMIN role
+        ResponseEntity<String> authResponse = apiKeyAuthService.validateApiKey(authorizationHeader);
+        if (!authResponse.getStatusCode().is2xxSuccessful() || !authResponse.getBody().equals("ADMIN")) {
+            return ResponseEntity.status(authResponse.getStatusCode()).body(null);
+        }
+
+        // Retrieve sales by date
+        List<Sale> sales = saleService.getSalesByDate(saleDate);
+        return ResponseEntity.ok(sales);
     }
 
     @GetMapping("/totalRevenue")
-    public double getTotalRevenue(@RequestParam String startDate,
-                                  @RequestParam String endDate) {
-        return saleService.getTotalRevenue(startDate, endDate);
+    public ResponseEntity<Double> getTotalRevenue(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+
+        // Validate the API key and check if the user has ADMIN role
+        ResponseEntity<String> authResponse = apiKeyAuthService.validateApiKey(authorizationHeader);
+        if (!authResponse.getStatusCode().is2xxSuccessful() || !authResponse.getBody().equals("ADMIN")) {
+            return ResponseEntity.status(authResponse.getStatusCode()).body(null);
+        }
+
+        // Calculate total revenue
+        double totalRevenue = saleService.getTotalRevenue(startDate, endDate);
+        return ResponseEntity.ok(totalRevenue);
     }
-    
-    
+
     @GetMapping("/calculateBill")
-    public String calculateBill(@RequestParam Map<String, String> params) {
+    public ResponseEntity<String> calculateBill(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestParam Map<String, String> params) {
+
+//        // Validate the API key and check if the user has ADMIN role
+//        ResponseEntity<String> authResponse = apiKeyAuthService.validateApiKey(authorizationHeader);
+//        if (!authResponse.getStatusCode().is2xxSuccessful() || !authResponse.getBody().equals("ADMIN")) {
+//            return ResponseEntity.status(authResponse.getStatusCode()).body("Admin Access Only");
+//        }
+
+        // Calculate the bill
         Map<Long, Integer> productQuantities = new HashMap<>();
         for (Map.Entry<String, String> entry : params.entrySet()) {
             try {
@@ -46,10 +91,11 @@ public class SaleController {
                 Integer quantity = Integer.parseInt(entry.getValue());
                 productQuantities.put(productId, quantity);
             } catch (NumberFormatException e) {
-                return "Invalid product ID or quantity format.";
+                return ResponseEntity.badRequest().body("Invalid product ID or quantity format.");
             }
         }
-        return saleService.calculateBill(productQuantities);
+
+        String result = saleService.calculateBill(productQuantities);
+        return ResponseEntity.ok(result);
     }
-    
 }
