@@ -3,6 +3,9 @@ package com.example.gstbilling.controller;
 import com.example.gstbilling.model.Category;
 import com.example.gstbilling.service.ApiKeyAuthService;
 import com.example.gstbilling.service.CategoryService;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -73,6 +76,24 @@ public class CategoryController {
 
         categoryService.deleteCategory(id);
         return ResponseEntity.ok("Category deleted successfully");
+    }
+    
+ // New Method to Get All Categories
+    @GetMapping
+    public ResponseEntity<List<Category>> getAllCategories(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+
+        if (authorizationHeader == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
+
+        ResponseEntity<String> authResponse = apiKeyAuthService.validateApiKey(authorizationHeader);
+        if (!authResponse.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+
+        List<Category> categories = categoryService.getAllCategories();
+        return ResponseEntity.ok(categories);
     }
 }
 

@@ -2,6 +2,9 @@ package com.example.gstbilling.service;
 
 import com.example.gstbilling.model.Category;
 import com.example.gstbilling.repository.CategoryRepository;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,5 +27,9 @@ public class CategoryService {
 
     public void deleteCategory(Long id) {
         categoryRepository.deleteById(id);
+    }
+    
+    public List<Category> getAllCategories() {
+        return categoryRepository.findAll();
     }
 }
